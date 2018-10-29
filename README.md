@@ -1,1 +1,2 @@
-CSGO-Tower-Defence
+# CSGO Tower Defence
+WIP, DO NOT INSTALL THIS IN YOUR SERVER.
