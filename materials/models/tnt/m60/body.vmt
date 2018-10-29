@@ -1,0 +1,6 @@
+"VertexlitGeneric"
+{
+"$basetexture" "models\tnt\m60\body"
+"$envmap" "env_cubemap"
+"$envmapmask" "models\tnt\m60\body_ref"
+}

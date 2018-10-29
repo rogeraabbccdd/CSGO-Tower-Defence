@@ -1,0 +1,17 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\tnt\towersrazed_tower_dif_01"
+	"$bumpmap" "models\tnt\towersrazed_tower_nor_01"
+	
+	"$halflambert" "1"
+
+	"$phong" "1"
+	"$phongtint" "[0.2 0.25 0.3]"
+	"$phongexponent" "1000"
+	"$phongboost" "4"
+	"$phongfresnelranges" "[0.2 0.3 0.4]"
+
+	"$rimlight" "1"
+	"$rimlightexponent" "10"
+	"$rimlightboost" "1"
+}

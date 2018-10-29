@@ -1,0 +1,19 @@
+"VertexLitGeneric"
+{
+	"$baseTexture" "models\tnt\mixmap_03b"
+
+	"$selfillum" "1"
+
+	"$additive" 1
+	"$translucent" 1
+	"$vertexalpha" 1
+	"$vertexcolor" 1
+
+	Proxies
+	{
+		TNTMixmap
+		{
+			resultVar	$selfillumtint
+		}
+	}
+}
