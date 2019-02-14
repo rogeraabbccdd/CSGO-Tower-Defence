@@ -71,17 +71,16 @@ void LoadMapConfig()
 	} while (kv.GotoNextKey());
 	
 	kv.Rewind();
-	
-	//**********************************  Monsters  **********************************//
-	
-	BuildPath(Path_SM, Configfile, sizeof(Configfile), "configs/defense/%s/monsters.cfg", sMapName2);
+
+	//**********************************  Waves  **********************************//
+	BuildPath(Path_SM, Configfile, sizeof(Configfile), "configs/defense/%s/waves.cfg", sMapName2);
 	
 	if (!FileExists(Configfile))
 	{
 		SetFailState("Fatal error: Unable to open configuration file \"%s\"!", Configfile);
 	}
 	
-	kv = CreateKeyValues("Monsters");
+	kv = CreateKeyValues("Waves");
 	kv.ImportFromFile(Configfile);
 	
 	if(!kv.GotoFirstSubKey())
@@ -89,37 +88,71 @@ void LoadMapConfig()
 		SetFailState("Fatal error: Unable to read configuration file \"%s\"!", Configfile);
 	}
 	
-	char hp[PLATFORM_MAX_PATH];
-	
-	MonCount = 0;
-	do
-	{
-		kv.GetSectionName(name, sizeof(name));
-		kv.GetString("model", model, sizeof(model), "unknown");
-		kv.GetString("hp", hp, sizeof(hp), "unknown");
-		
-		if(!StrEqual(model, "unknown") && !StrEqual(hp, "unknown"))
+	char bgm1[PLATFORM_MAX_PATH], bgm2[PLATFORM_MAX_PATH], zone[PLATFORM_MAX_PATH];
+	// Read big waves
+	do{
+		WaveTime[WaveBigs] = kv.GetFloat("time", 0.0);
+		WaveDelay[WaveBigs] = kv.GetFloat("delay", 0.0);
+
+		if(WaveTime[WaveBigs] <= 0.0 || WaveDelay[WaveBigs] <= 0.0)
 		{
-			strcopy(MonName[MonCount], sizeof(MonName[]), name);
-			strcopy(MonModel[MonCount], sizeof(MonModel[]), model);
-			
-			MonHP[MonCount] = kv.GetNum("hp", 100);
-			PrecacheModel(MonModel[MonCount], true);
-			
-			MonCount++;
+			SetFailState("Fatal error: Please check your wave configs.");
 		}
-		else
-		{
-			LogError("Unable to read tower settings of %s, ignoring...", name);
-		}
-	} while (kv.GotoNextKey());
+
+		kv.GetString("bgm1", bgm1, sizeof(bgm1), "");
+		kv.GetString("bgm2", bgm2, sizeof(bgm2), "");
+		strcopy(WaveBGM1[WaveBigs], sizeof(WaveBGM1[]), bgm1);
+		strcopy(WaveBGM2[WaveBigs], sizeof(WaveBGM2[]), bgm2);
+
+		// Read Small Waves
+		int small = 1;
+		kv.GotoFirstSubKey();
+		do{
+			// Read Enemy
+			kv.JumpToKey("enemy");
+			kv.GotoFirstSubKey();
+			int enemies = 0;
+
+			do{
+				kv.GetSectionName(WaveEnemyName[WaveBigs][small][enemies], sizeof(WaveEnemyName[][][]));
+				WaveEnemyCount[WaveBigs][small][enemies] = kv.GetNum("count");
+
+				kv.GetString("zone", zone, sizeof(zone), "123");
 	
-	kv.Rewind();
+				if(StrEqual(zone, ""))	
+				{
+					SetFailState("Fatal error: Please set a spawn zone for your enemies in wave configs.");
+				}
+				strcopy(WaveEnemyZone[WaveBigs][small][enemies], sizeof(WaveEnemyZone[][][]), zone);
+
+				enemies++;
+
+			}while(kv.GotoNextKey())
+
+			WaveEnemys[WaveBigs][small] = enemies;
+
+			WaveEnemysCount[WaveBigs][small] += enemies;
+
+			kv.GoBack();
+			kv.GoBack();
+
+			small++;
+
+		}while(kv.GotoNextKey())
+
+		small--;
+
+		WaveSmalls[WaveBigs] = small;
+
+		kv.GoBack();
+	
+		WaveBigs++;
+
+	}while(kv.GotoNextKey())
+
+	WaveBigs--;
+
 	delete kv;
-	
-	//**********************************  Waves  **********************************//
-	//
-	//
 }
 
 void DownloadFiles()

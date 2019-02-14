@@ -40,13 +40,15 @@ void SpawnTowers()
 		
 		SDKHook(Tower[i], SDKHook_OnTakeDamage, OnTowerDamage);
 
-		// Spawn Bot for showing tower health on scoreboard
+		// Spawn a bot for showing tower health on scoreboard
 		if(!IsValidClient(TowerBot[i]))
 		{
 			TowerBot[i] = CreateFakeClient(TowerName[i]);
 				
 			PushArrayCell(TowerBotArray, GetClientUserId(TowerBot[i]));
-			ChangeClientTeam(TowerBot[i], 2);
+
+			// Player team is CT
+			ChangeClientTeam(TowerBot[i], CT);
 			
 			CS_RespawnPlayer(TowerBot[i]);
 			
@@ -113,10 +115,8 @@ public Action OnTowerDamage (int victim, int &attacker, int &inflictor, float &d
 		if(health2 <= (TowerHP[towerid] * 0.5) && !StrEqual(TowerSmoke[towerid], ""))
 		{
 			int entity = EntRefToEntIndex(TowerParticleRef[towerid]);
-			if(entity != INVALID_ENT_REFERENCE && IsValidEdict(entity) && entity != 0)
-			{
-				return;
-			}
+			
+			if(entity != INVALID_ENT_REFERENCE && IsValidEdict(entity) && entity != 0)	return;
 			
 			TowerParticle[towerid] = CreateEntityByName("info_particle_system");
 		

@@ -8,23 +8,16 @@
 	[*] Tower Particle
 	[ ] HUD Text (Total Tower HP)
 -----------------------------------------------------------------------------
-[ ] Monsters 
-Use	https://forums.alliedmods.net/showpost.php?p=2416226&postcount=43
-or	http://ownageclan.com/websvn/filedetails.php?repname=war3source&path=%2FWCX_Engine_FakeNPC.sp
-	[ ] Configs
-		[-] Design config file
-		[ ] Load config
-	[ ] Monster Spawn Zones (Devzones 3rd party plugin)
-	[ ] Tower Damage
-		[ ] SDKHook take damage (What damagetype does monster do?)
+[ ] Enemies 
+	[-] Natives for 3rd praty plugin (Call when spawn)
 -----------------------------------------------------------------------------
 [ ] Waves
-	[ ] Configs
-		[ ] Design config file
-		[ ] Load config
+	[*] Configs
+		[*] Design config file
+		[*] Load config
 	[ ] Skybox
 	[ ] Danger Wave HP+20%, ATK+20%?
-	[ ] Spawn monsters
+	[-] Spawn enemies
 	[ ] BGM
 		[ ] BGM timer for each player
 		[ ] Command to change volume
@@ -32,6 +25,8 @@ or	http://ownageclan.com/websvn/filedetails.php?repname=war3source&path=%2FWCX_E
 		Planning to use BGMs
 		http://www.nicovideo.jp/watch/sm26739858
 		http://www.nicovideo.jp/watch/sm22481227
+
+	[ ] Overlays
 -----------------------------------------------------------------------------
 [ ] Others
 	[ ] Download
@@ -63,7 +58,6 @@ or	http://ownageclan.com/websvn/filedetails.php?repname=war3source&path=%2FWCX_E
 #include <sdktools>
 #include <sdkhooks>
 #include <kento_csgocolors>
-#include <clientprefs>
 #include <cstrike>
 
 #pragma newdecls required
@@ -90,17 +84,34 @@ Handle TowerBotArray;
 int TowerParticle[MAXTOWERS];
 int TowerParticleRef[MAXTOWERS] = INVALID_ENT_REFERENCE;
 
-// Monsters
-#define MAXMONSTERS 100
-int MonCount;
-char MonName[MAXMONSTERS][PLATFORM_MAX_PATH];
-char MonModel[MAXMONSTERS][PLATFORM_MAX_PATH];
-int MonHP[MAXMONSTERS];
+// Waves
+#define MAXBIGWAVE 10
+#define MAXSMALLWAVE 10
+#define MAXENEMYINWAVE 10
+int WaveBigs = 1;
+int WaveSmalls[MAXBIGWAVE] = 1;
+char WaveBGM1[MAXBIGWAVE][PLATFORM_MAX_PATH];
+char WaveBGM2[MAXBIGWAVE][PLATFORM_MAX_PATH];
+float WaveTime[MAXBIGWAVE];
+float WaveDelay[MAXBIGWAVE];
+int WaveEnemys[MAXBIGWAVE][MAXSMALLWAVE];
+int WaveEnemysCount[MAXBIGWAVE][MAXSMALLWAVE];
+char WaveEnemyZone[MAXBIGWAVE][MAXSMALLWAVE][MAXENEMYINWAVE][PLATFORM_MAX_PATH];
+int WaveEnemyCount[MAXBIGWAVE][MAXSMALLWAVE][MAXENEMYINWAVE];
+char WaveEnemyName[MAXBIGWAVE][MAXSMALLWAVE][MAXENEMYINWAVE][PLATFORM_MAX_PATH];
+int WaveNowBig;
+int WaveNowSmall;
+
+// Enemy
+Handle EnemyArray;
 
 // Includes
-#include <defence/configs>
-#include <defence/towers>
-#include <defence/waves>
+#include <kento_defence>
+#include "def/configs.sp"
+#include "def/towers.sp"
+#include "def/waves.sp"
+#include "def/natives.sp"
+#include <devzones>
 
 public Plugin myinfo =
 {
@@ -121,13 +132,12 @@ public void OnPluginStart()
 	AddCommandListener(Command_Join, "jointeam");
 	
 	TowerBotArray = CreateArray();
+	EnemyArray =  CreateArray();
 }
 
 public void OnConfigsExecuted()
 {
-	// mp_warmuptime		"300"
-	// mp_warmup_pausetimer		"1"
-	// mp_death_drop_gun 0
+	
 }
 
 public void OnMapStart() 
@@ -143,12 +153,13 @@ public Action Event_RoundStart(Handle event, const char[] name, bool dontBroadca
 
 public Action Command_Join(int client, const char[] command, int argc)
 {
+	if(IsFakeClient(client))	return Plugin_Handled;
+	
 	char sJoining[8];
 	GetCmdArg(1, sJoining, sizeof(sJoining));
-	int iJoining = StringToInt(sJoining);
-	// int iTeam = GetClientTeam(client);
+	int iJoining = StringToInt(sJoining)
 	
-	// T is for monsters
+	// T is for enemies
 	if(iJoining == CS_TEAM_T)	return Plugin_Handled;
 	return Plugin_Continue;
 }
@@ -176,5 +187,43 @@ void setFlags(int edict)
 
 public Action CMD_Test(int client, int args)
 {
-	
+	WaveNowBig = 1;
+	WaveNowSmall = 1;
+
+	PrintToChatAll("small: %d", WaveSmalls[WaveNowBig]);
+	PrintToChatAll("WaveEnemys: %d", WaveEnemys[WaveNowBig][WaveNowSmall]);
+
+	int bot = WaveEnemysCount[WaveNowBig][WaveNowSmall] + TowerCount;
+	ServerCommand("bot_quota %d", bot);
+	ServerCommand("mp_autoteambalance 0");
+	ServerCommand("mp_limitteams 0");
+
+	// loop all type
+	for(int i=0;i<WaveEnemys[WaveNowBig][WaveNowSmall];i++)
+	{
+		PrintToChatAll("WaveEnemyCount: %d", WaveEnemyCount[WaveNowBig][WaveNowSmall][i]);
+
+		// spawn count
+		for(int j=0;j<WaveEnemyCount[WaveNowBig][WaveNowSmall][i]; j++)
+		{
+			PrintToChatAll("Zone: %s", WaveEnemyZone[WaveNowBig][WaveNowSmall][j]);
+
+			int enemy = CreateFakeClient("xXx_Enemy_1337_xXx");
+			PrintToChatAll("%d", GetClientUserId(enemy));
+			PushArrayCell(EnemyArray, GetClientUserId(enemy));
+					
+			ChangeClientTeam(enemy, TR);
+			CS_RespawnPlayer(enemy);
+			
+			float position[3];
+			if(Zone_GetZonePosition(WaveEnemyZone[WaveNowBig][WaveNowSmall][j], false, position))
+				TeleportEntity(enemy, position, NULL_VECTOR, NULL_VECTOR);
+
+			// Call forward
+			Call_StartForward(OnEnemySpawn);
+			Call_PushString(WaveEnemyName[WaveNowBig][WaveNowSmall][i]);
+			Call_PushCell(enemy);
+			Call_Finish();
+		}
+	}
 }
